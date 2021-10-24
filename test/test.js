@@ -32,7 +32,7 @@ function register(citizen_id, name, surname, birth_date, occupation, address) {
 }
 
 function registerJSON(JSONData) {
-    var queryString = generateQueryString(JSONData.citizen_id, JSONData.name, JSONData.surname, JSONData.birth_date, JSONData.occupation, JSONData.address);
+    var queryString = generateQueryStringJSON(JSONData);
     request.post({url: baseURL + 'registration' + queryString}, function(error, response, body) {
         console.log(body);
     });
@@ -79,10 +79,58 @@ describe("WCG API Test GET method", function() {
 
 
 describe("WCG API Test POST method", function() {
-    it("Test adding new citizen by an invalid citizen id", function(done) {
+    it("Test register new citizen by an invalid citizen id", function(done) {
         var queryString = generateQueryString("WAAA-040", "Johnny", "Potae", "12 Dec 1992", "student", "Venus");
         request.post({url: baseURL + 'registration' + queryString}, function(error, response, body) {
             expect(JSON.parse(body)["feedback"]).to.equal("registration failed: invalid citizen ID");
+            done();
+        });
+    });
+
+    it("Test register new citizen without citizen id given", function(done) {
+        var queryString = generateQueryString("", "Johnny", "Potae", "12 Dec 1992", "student", "Venus");
+        request.post({url: baseURL + 'registration' + queryString}, function(error, response, body) {
+            expect(JSON.parse(body)["feedback"]).to.equal("registration failed: missing some attribute");
+            done();
+        });
+    });
+
+    it("Test register new citizen without name given", function(done) {
+        var queryString = generateQueryString("1126210545629", "", "Potae", "12 Dec 1992", "student", "Venus");
+        request.post({url: baseURL + 'registration' + queryString}, function(error, response, body) {
+            expect(JSON.parse(body)["feedback"]).to.equal("registration failed: missing some attribute");
+            done();
+        });
+    });
+
+    it("Test register new citizen without surname given", function(done) {
+        var queryString = generateQueryString("1126210545631", "Johnny", "", "12 Dec 1992", "student", "Venus");
+        request.post({url: baseURL + 'registration' + queryString}, function(error, response, body) {
+            expect(JSON.parse(body)["feedback"]).to.equal("registration failed: missing some attribute");
+            done();
+        });
+    });
+
+    it("Test register new citizen without birth date given", function(done) {
+        var queryString = generateQueryString("1126210545632", "Johnny", "Potae", "", "student", "Venus");
+        request.post({url: baseURL + 'registration' + queryString}, function(error, response, body) {
+            expect(JSON.parse(body)["feedback"]).to.equal("registration failed: missing some attribute");
+            done();
+        });
+    });
+
+    it("Test register new citizen without occupation given", function(done) {
+        var queryString = generateQueryString("1126210545633", "Johnny", "Potae", "12 Dec 1992", "", "Venus");
+        request.post({url: baseURL + 'registration' + queryString}, function(error, response, body) {
+            expect(JSON.parse(body)["feedback"]).to.equal("registration failed: missing some attribute");
+            done();
+        });
+    });
+
+    it("Test register new citizen without address given", function(done) {
+        var queryString = generateQueryString("1126210545633", "Johnny", "Potae", "12 Dec 1992", "student", "");
+        request.post({url: baseURL + 'registration' + queryString}, function(error, response, body) {
+            expect(JSON.parse(body)["feedback"]).to.equal("registration failed: missing some attribute");
             done();
         });
     });
