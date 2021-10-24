@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "chai-http": "^4.3.0",
+    "request-promise": "^4.2.6",
     "xhr2": "^0.2.1"
   }
 }
