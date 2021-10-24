@@ -1,7 +1,7 @@
 const should = require("should");
 const request = require("request");
-var chai = require("chai");
-let {expect, assert} = require("chai");
+const chai = require("chai");
+const {expect, assert} = require("chai");
 const axios = require("axios").default;
 const baseURL = "https://wcg-apis.herokuapp.com/";
 let chaiHttp = require("chai-http");
@@ -24,20 +24,31 @@ const keybuayJSON = {
     address: "Samutprakarn"
 }
 
-function register(JSONdata) {
-    var feedback = "";
-    request.post({
-        headers: {'content-type': 'application/json'},
-        url: baseURL + "registration",
-        form: JSONdata
-    }, function(error, response, body){
-        feedback = JSON.parse(body)["feedback"];
+function register(citizen_id, name, surname, birth_date, occupation, address) {
+    var queryString = generateQueryString(citizen_id, name, surname, birth_date, occupation, address);
+    request.post({url: baseURL + 'registration' + queryString}, function(error, response, body) {
+        console.log(body);
     });
-    return feedback;
 }
 
-register(kleeJSON);
-register(keybuayJSON);
+function registerJSON(JSONData) {
+    var queryString = generateQueryString(JSONData.citizen_id, JSONData.name, JSONData.surname, JSONData.birth_date, JSONData.occupation, JSONData.address);
+    request.post({url: baseURL + 'registration' + queryString}, function(error, response, body) {
+        console.log(body);
+    });
+}
+
+function generateQueryString(citizen_id, name, surname, birth_date, occupation, address) {
+    return `?citizen_id=${citizen_id}&name=${name}&surname=${surname}&birth_date=${birth_date}&occupation=${occupation}&address=${address}`;
+}
+
+function generateQueryStringJSON(JSONData) {
+    return generateQueryString(JSONData.citizen_id, JSONData.name, JSONData.surname, JSONData.birth_date, JSONData.occupation, JSONData.address);
+}
+
+registerJSON(kleeJSON);
+registerJSON(keybuayJSON);
+
 
 // initial test
 describe("API web service status check", function() {
@@ -49,7 +60,8 @@ describe("API web service status check", function() {
     });
 });
 
-describe("API Test", function() {
+
+describe("WCG API Test GET method", function() {
     it("Test an endpoint of getting citizen JSON by a valid citizen id correctly", function(done) {
         request.get({url: baseURL + 'citizen/' + keybuayJSON.citizen_id}, function(error, response, body) {
             expect(JSON.parse(body)["citizen-id"]).to.equal(keybuayJSON.citizen_id);
@@ -63,6 +75,15 @@ describe("API Test", function() {
             done();
         });
     });
+});
 
-    
+
+describe("WCG API Test POST method", function() {
+    it("Test adding new citizen by an invalid citizen id", function(done) {
+        var queryString = generateQueryString("WAAA-040", "Johnny", "Potae", "12 Dec 1992", "student", "Venus");
+        request.post({url: baseURL + 'registration' + queryString}, function(error, response, body) {
+            expect(JSON.parse(body)["feedback"]).to.equal("registration failed: invalid citizen ID");
+            done();
+        });
+    });
 });
