@@ -1,31 +1,28 @@
 {
-  "name": "api-testing",
+  "name": "vaccine-api-test",
   "version": "1.0.0",
-  "description": "Testing for API web service",
-  "main": "index.js ",
+  "description": "WCG API endpoints testing",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "chai": "^4.3.4",
+    "chai-http": "^4.3.0",
+    "mocha": "^9.1.3"
+  },
   "scripts": {
     "test": "mocha"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/keyboard2543/api-testing.git"
+    "url": "git+https://github.com/keyboard2543/vaccine-api-test.git"
   },
-  "author": "",
+  "author": "keyboard2543",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/keyboard2543/api-testing/issues"
+    "url": "https://github.com/keyboard2543/vaccine-api-test/issues"
   },
-  "homepage": "https://github.com/keyboard2543/api-testing#readme",
-  "devDependencies": {
-    "axios": "^0.23.0",
-    "chai": "^4.3.4",
-    "mocha": "^9.1.3",
-    "request": "^2.88.2",
-    "should": "^13.2.3"
-  },
-  "dependencies": {
-    "chai-http": "^4.3.0",
-    "request-promise": "^4.2.6",
-    "xhr2": "^0.2.1"
-  }
+  "homepage": "https://github.com/keyboard2543/vaccine-api-test#readme"
 }

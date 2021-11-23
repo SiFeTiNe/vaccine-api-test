@@ -1,169 +1,224 @@
-const should = require("should");
-const request = require("request-promise");
-const chai = require("chai");
-const {expect, assert} = require("chai");
-const axios = require("axios").default;
-const baseURL = "https://wcg-apis.herokuapp.com/";
-const mocha = require("mocha");
-let chaiHttp = require("chai-http");
-const { before } = require("mocha");
+const chai = require('chai');
+const chaiHttp = require('chai-http');
+const server = 'http://wcg-apis-test.herokuapp.com/';
+const year = new Date().getFullYear();
+
+// Assertion Style
+chai.should();
+
 chai.use(chaiHttp);
 
-const missingCitizenParamMessage = "registration failed: missing some attribute";
-const invalidCitizenIdMessage = "registration failed: invalid citizen ID";
-const alreadyRegisteredMessage = "registration failed: this person already registered";
-const alreadyReservedMessage = "reservation failed: there is already a reservation for this citizen";
-const invalidVaccineNameMessage = "report failed: invalid vaccine name";
-const cancelReservationMessage = "cancel reservation successfully";
-const futureVaccineMessage = "report failed: can only reserve vaccine in the future";
-const registrationSuccessMessage = "registration success!";
+const REGISTRATION_FEEDBACK = {
+    'success':              'registration success!',
+    'missing_key':          'registration failed: missing some attribute',
+    'registered':           'registration failed: this person already registered',
+    'invalid_id':           'registration failed: invalid citizen ID',
+    'invalid_birthdate':    'registration failed: invalid birth date format',
+    'invalid_age':          'registration failed: not archived minimum age',
+    'other':                'registration failed: something go wrong, please contact admin'
+};
 
 const kleeJSON = {
-    citizen_id: "1103703125435",
-    name: "Sahatsawat",
-    surname: "Kanpai",
-    birth_date: "21 Oct 2000",
-    occupation: "student",
-    address: "Samutprakarn"
-}
-const keybuayJSON = {
-    citizen_id: "1103703125439",
-    name: "Sahatsawuay",
-    surname: "Huacut",
-    birth_date: "12 Dec 2000",
-    occupation: "cat",
-    address: "Bangkok"
-}
+    citizen_id: '1103703125435',
+    name: 'Kleeboard',
+    surname: 'FiNeSiTe',
+    birth_date: '2000-10-21',
+    occupation: 'INFP',
+    phone_number: '0923995853',
+    is_risk: 'False',
+    address: 'INFP 9w1 sp/sx 945 RLUAI Phlegmatic-Melancholic'
+};
+const enfjJSON = {
+    citizen_id: '0212792791210',
+    name: 'Protagonist',
+    surname: 'FeNiSeTi',
+    birth_date: '2000-12-12',
+    occupation: 'ENFJ',
+    phone_number: '0212792791',
+    is_risk: 'False',
+    address: 'ENFJ 2w1 so/sx 279 SCOAI Sanguine-Melancholic'
+};
+const mockerJSON = {
+    citizen_id: '0126210545459',
+    name: 'Boss',
+    surname: 'TeNiSeFi',
+    birth_date: '2000-12-5',
+    occupation: 'ENTJ',
+    phone_number: '0878358351',
+    is_risk: 'True',
+    address: 'ENTJ 8w7 sx/so 835 SCOEI Choleric-Sanguine'
+};
 
-function register(citizen_id, name, surname, birth_date, occupation, address) {
-    var queryString = generateQueryString(citizen_id, name, surname, birth_date, occupation, address);
-    request.post({url: baseURL + 'registration' + queryString});
-}
 
-function registerJSON(JSONData) {
-    var queryString = generateQueryStringJSON(JSONData);
-    request.post({url: baseURL + 'registration' + queryString});
-}
+describe('WCG API Tests', () => {
 
-function generateQueryString(citizen_id, name, surname, birth_date, occupation, address) {
-    return `?citizen_id=${citizen_id}&name=${name}&surname=${surname}&birth_date=${birth_date}&occupation=${occupation}&address=${address}`;
-}
+    /**
+     * Setup before the test is started
+     */
+    before((done) => {
+        chai.request(server)                
+        .post('/registration')
+        .set('content-type', 'application/x-www-form-urlencoded')
+        .send(kleeJSON)
+        .end((err, response) => {
+            chai.request(server)                
+                .post('/registration')
+                .set('content-type', 'application/x-www-form-urlencoded')
+                .send(enfjJSON)
+                .end((err, response) => {
+                    done();
+                });
+        });
+    });
 
-function generateQueryStringJSON(JSONData) {
-    return generateQueryString(JSONData.citizen_id, JSONData.name, JSONData.surname, JSONData.birth_date, JSONData.occupation, JSONData.address);
-}
+    /**
+     * Test the GET registration
+     */
+    describe('Registration GET tests', () => {
 
-before(done => {
-    request.delete({ url: baseURL + "citizen" });
-    setTimeout(() => {
-        registerJSON(kleeJSON);
-        registerJSON(keybuayJSON);
-        done();
-    }, 1500);
+        /**
+         * Setup before the test is started
+         * GET only once so that not to mess up the server and timeout
+         */
+        before((done) => {
+            chai.request(server)
+                .get(`/registration/${kleeJSON['citizen_id']}`)
+                .end((err, response) => {
+                    this.res_data = JSON.parse(response.text);
+                    done();
+                });
+        });
+        
+        for (const [key, value] of Object.entries(kleeJSON)) {
+            it(`GET /registration/{{ citizen_id }} checking ${key}`, (done) => {
+                this.res_data.should.have.property(key).eq(value);
+                done();
+            });
+        }
+    });
+
+    /**
+     * Test POST registration
+     */
+    describe('Registration POST tests', () => {
+
+        /**
+         * Setup before the test is started
+         */
+        before((done) => {
+            chai.request(server)                
+            .delete(`/registration/${mockerJSON['citizen_id']}`)
+            .end((err, response) => {
+                done();
+            });
+        })
+
+        it('POST /registration with registered citizen', (done) => {
+            chai.request(server)
+            .post('/registration')
+            .set('content-type', 'application/x-www-form-urlencoded')
+            .send(kleeJSON)
+            .end((err, response) => {
+                (JSON.parse(response.text)).should.have.property('feedback').eq(REGISTRATION_FEEDBACK['registered']);
+                done();
+            });
+        });
+        
+        it('POST /registration with invalid citizen_id length', (done) => {
+            let mockeryJSON = Object.assign(this, mockerJSON);
+            mockeryJSON['citizen_id'] = '1150';
+            chai.request(server)                
+            .post('/registration')
+            .set('content-type', 'application/x-www-form-urlencoded')
+            .send(mockeryJSON)
+            .end((err, response) => {
+                (JSON.parse(response.text)).should.have.property('feedback').eq(REGISTRATION_FEEDBACK['invalid_id']);
+                done();
+            });
+        });
+
+        it('POST /registration with invalid citizen_id format', (done) => {
+            let mockeryJSON = Object.assign(this, mockerJSON);
+            mockeryJSON['citizen_id'] = '~~~ kore wa id janain da ~~~';
+            chai.request(server)                
+            .post('/registration')
+            .set('content-type', 'application/x-www-form-urlencoded')
+            .send(mockeryJSON)
+            .end((err, response) => {
+                (JSON.parse(response.text)).should.have.property('feedback').eq(REGISTRATION_FEEDBACK['invalid_id']);
+                done();
+            });
+        });
+
+        it('POST /registration with invalid age', (done) => {
+            let mockeryJSON = Object.assign(this, mockerJSON);
+            mockeryJSON['birth_date'] = `${year-7}-01-01`;
+            chai.request(server)                
+            .post('/registration')
+            .set('content-type', 'application/x-www-form-urlencoded')
+            .send(mockeryJSON)
+            .end((err, response) => {
+                (JSON.parse(response.text)).should.have.property('feedback').eq(REGISTRATION_FEEDBACK['invalid_age']);
+                done();
+            });
+        });
+
+        it('POST /registration with invalid month in birth_date', (done) => {
+            let mockeryJSON = Object.assign(this, mockerJSON);
+            mockeryJSON['birth_date'] = `${year-19}-19-01`;
+            chai.request(server)                
+            .post('/registration')
+            .set('content-type', 'application/x-www-form-urlencoded')
+            .send(mockeryJSON)
+            .end((err, response) => {
+                (JSON.parse(response.text)).should.have.property('feedback').eq(REGISTRATION_FEEDBACK['invalid_birthdate']);
+                done();
+            });
+        });
+
+        it('POST /registration with invalid day in birth_date', (done) => {
+            let mockeryJSON = Object.assign(this, mockerJSON);
+            mockeryJSON['birth_date'] = `${year-19}-12-79`;
+            chai.request(server)                
+            .post('/registration')
+            .set('content-type', 'application/x-www-form-urlencoded')
+            .send(mockeryJSON)
+            .end((err, response) => {
+                (JSON.parse(response.text)).should.have.property('feedback').eq(REGISTRATION_FEEDBACK['invalid_birthdate']);
+                done();
+            });
+        });
+
+        it('POST /registration with invalid birth_date format', (done) => {
+            let mockeryJSON = Object.assign(this, mockerJSON);
+            mockeryJSON['birth_date'] = 'tanjoubi-da-yo';
+            chai.request(server)                
+            .post('/registration')
+            .set('content-type', 'application/x-www-form-urlencoded')
+            .send(mockeryJSON)
+            .end((err, response) => {
+                (JSON.parse(response.text)).should.have.property('feedback').eq(REGISTRATION_FEEDBACK['invalid_birthdate']);
+                done();
+            });
+        });
+
+        it('POST /registration name with a script', (done) => {
+            let mockeryJSON = Object.assign(this, mockerJSON);
+            mockeryJSON['name'] = "Script is here!<script>alert('Kleeboard is Too horny!');</script>";
+            chai.request(server)                
+            .delete(`/registration/${mockeryJSON['citizen_id']}`)
+            .set('content-type', 'application/none')
+            .end((err, response) => {
+                chai.request(server)                
+                .post('/registration')
+                .set('content-type', 'application/x-www-form-urlencoded')
+                .send(mockeryJSON)
+                .end((err, response) => {
+                    (JSON.parse(response.text)).should.have.property('feedback').eq(REGISTRATION_FEEDBACK['other']);
+                    done();
+                });
+            });
+        });
+    });
+    
 });
-
-describe("API web service status check", () => {
-    it("Test OK status code 200", (done) => {
-        request.get({url: baseURL}, (error, response, body) => {
-            expect(response.statusCode).to.equal(200);
-            done();
-        });
-    });
-});
-
-
-describe("WCG API Test citizen GET method", () => {
-    it("Test an endpoint of getting citizen JSON by a valid citizen id correctly", (done) => {
-        request.get({url: baseURL + 'citizen/' + keybuayJSON.citizen_id}, (error, response, body) => {
-            expect(JSON.parse(body)["citizen-id"]).to.equal(keybuayJSON.citizen_id);
-            done();
-        });
-    });
-
-    it("Test an endpoint of getting citizen JSON by an invalid citizen id", (done) => {
-        request.get({url: baseURL + 'citizen/' + "kore-wa-id-janain-da"}, (error, response, body) => {
-            expect(response.statusCode).to.not.equal(200);
-            done();
-        });
-    });
-});
-
-
-describe("WCG API Test registration POST method", () => {
-    it("Test register new citizen with an already registered citizen", (done) => {
-        var queryString = generateQueryStringJSON(kleeJSON);
-        request.post({url: baseURL + 'registration' + queryString}, (error, response, body) => {
-            expect(JSON.parse(body)["feedback"]).to.equal(alreadyRegisteredMessage);
-            done();
-        });
-    });
-
-    it("Test register new citizen with an invalid citizen id", (done) => {
-        var queryString = generateQueryString("WAAA-040", "Johnny", "Potae", "12 Dec 1992", "student", "Venus");
-        request.post({url: baseURL + 'registration' + queryString}, (error, response, body) => {
-            expect(JSON.parse(body)["feedback"]).to.equal(invalidCitizenIdMessage);
-            done();
-        });
-    });
-
-    it("Test register new citizen without citizen id given", (done) => {
-        var queryString = generateQueryString("", "Johnny", "Potae", "12 Dec 1992", "student", "Venus");
-        request.post({url: baseURL + 'registration' + queryString}, (error, response, body) => {
-            expect(JSON.parse(body)["feedback"]).to.equal(missingCitizenParamMessage);
-            done();
-        });
-    });
-
-    it("Test register new citizen without name given", (done) => {
-        var queryString = generateQueryString("1126210545629", "", "Potae", "12 Dec 1992", "student", "Venus");
-        request.post({url: baseURL + 'registration' + queryString}, (error, response, body) => {
-            expect(JSON.parse(body)["feedback"]).to.equal(missingCitizenParamMessage);
-            done();
-        });
-    });
-
-    it("Test register new citizen without surname given", (done) => {
-        var queryString = generateQueryString("1126210545631", "Johnny", "", "12 Dec 1992", "student", "Venus");
-        request.post({url: baseURL + 'registration' + queryString}, (error, response, body) => {
-            expect(JSON.parse(body)["feedback"]).to.equal(missingCitizenParamMessage);
-            done();
-        });
-    });
-
-    it("Test register new citizen without birth date given", (done) => {
-        var queryString = generateQueryString("1126210545632", "Johnny", "Potae", "", "student", "Venus");
-        request.post({url: baseURL + 'registration' + queryString}, (error, response, body) => {
-            expect(JSON.parse(body)["feedback"]).to.equal(missingCitizenParamMessage);
-            done();
-        });
-    });
-
-    it("Test register new citizen without occupation given", (done) => {
-        var queryString = generateQueryString("1126210545633", "Johnny", "Potae", "12 Dec 1992", "", "Venus");
-        request.post({url: baseURL + 'registration' + queryString}, (error, response, body) => {
-            expect(JSON.parse(body)["feedback"]).to.equal(missingCitizenParamMessage);
-            done();
-        });
-    });
-
-    it("Test register new citizen without address given", (done) => {
-        var queryString = generateQueryString("1126210545633", "Johnny", "Potae", "12 Dec 1992", "student", "");
-        request.post({url: baseURL + 'registration' + queryString}, (error, response, body) => {
-            expect(JSON.parse(body)["feedback"]).to.equal(missingCitizenParamMessage);
-            done();
-        });
-    });
-
-    it("Test should not register new citizen with script given", (done) => {
-        var queryString = generateQueryString("1126210545629", "Script is here!<script>alert('Kleeboard is Too horny!');</script>", "Potae", "12 Dec 1992", "NEET", "Venus");
-        request.post({url: baseURL + 'registration' + queryString}, (error, response, body) => {
-            expect(JSON.parse(body)["feedback"]).to.not.equal(registrationSuccessMessage);
-            done();
-        });
-    });
-});
-
-
-// describe("WCG API Test reservation POST method", function() {
-
-// });
